@@ -6,6 +6,15 @@ from hivemind_exp.trainer.hivemind_grpo_trainer import HivemindGRPOTrainer
 
 class TestnetGRPOTrainer(HivemindGRPOTrainer):
     def __init__(self, coordinator: SwarmCoordinator, **kwargs) -> None:
+        # Thêm cấu hình nhẹ cho GPU 8GB
+        if "config" in kwargs:
+            config = kwargs["config"]
+            config.llm_kwargs = {
+                "gpu_memory_utilization": 0.85,
+                "max_model_len": 8192,
+                "max_num_seqs": 4
+            }
+
         self.coordinator = coordinator
         super().__init__(**kwargs)
 
@@ -23,8 +32,6 @@ class TestnetGRPOTrainer(HivemindGRPOTrainer):
     def train(self):
         try:
             self.follower_train()
-
         except Exception:
             import traceback
-
             traceback.print_exc()
