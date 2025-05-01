@@ -1,11 +1,4 @@
 #!/bin/bash
-export CPU_ONLY=1
-export CUDA_VISIBLE_DEVICES=""
-
-# Force CPU-only mode
-export CPU_ONLY=1
-export CUDA_VISIBLE_DEVICES=""
-
 
 ROOT=$PWD
 
@@ -624,12 +617,10 @@ echo -e "${GREEN}${BOLD}[✓] Python virtual environment set up successfully.${N
 echo -e "${RED}${BOLD}[✗] Failed to set up virtual environment.${NC}"
 
 if [ -z "$CONFIG_PATH" ]; then
-    echo -e "${YELLOW}CPU-only mode – using CPU config${NC}"
-    pip install -r "$ROOT"/requirements-cpu.txt
-    CONFIG_PATH="$ROOT/hivemind_exp/configs/mac/grpo-qwen-2.5-0.5b-deepseek-r1.yaml"
-    GAME="gsm8k"
-    echo -e "${CYAN}${BOLD}[✓] Config file: ${BOLD}$CONFIG_PATH${NC}"
-fixing logic
+    if command -v nvidia-smi &> /dev/null || [ -d "/proc/driver/nvidia" ]; then
+        echo -e "${GREEN}${BOLD}[✓] GPU detected${NC}"
+        
+        # Here was the problematic break statement - removing it and fixing logic
         case "$PARAM_B" in
             32 | 72) 
                 CONFIG_PATH="$ROOT/hivemind_exp/configs/gpu/grpo-qwen-2.5-${PARAM_B}b-bnb-4bit-deepseek-r1.yaml"
