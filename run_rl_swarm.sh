@@ -18,6 +18,8 @@ export IDENTITY_PATH
 export ORG_ID
 export HF_HUB_DOWNLOAD_TIMEOUT=120
 export TUNNEL_TYPE=""
+export CPU_ONLY=1
+export CUDA_VISIBLE_DEVICES=""
 
 # Enforce GPU-only mode
 if ! command -v nvidia-smi &> /dev/null; then
