@@ -394,62 +394,6 @@ else
         return 0
     }
 
-    try_localtunnel() {
-        echo -e "\n${CYAN}${BOLD}[✓] Trying localtunnel...${NC}"
-        if install_localtunnel; then
-            echo -e "\n${CYAN}${BOLD}[✓] Starting localtunnel on port $PORT...${NC}"
-            TUNNEL_TYPE="localtunnel"
-            lt --port $PORT > localtunnel_output.log 2>&1 &
-            TUNNEL_PID=$!
-            
-            sleep 5
-            URL=$(grep -o "https://[^ ]*" localtunnel_output.log | head -n1)
-            
-            if [ -n "$URL" ]; then
-                PASS=$(curl -s https://loca.lt/mytunnelpassword)
-                FORWARDING_URL="$URL"
-                echo -e "${GREEN}${BOLD}[✓] Success! Please visit this website : ${YELLOW}${BOLD}${URL}${GREEN}${BOLD} and then enter this password : ${YELLOW}${BOLD}${PASS}${GREEN}${BOLD} to access the website and then log in using your email.${NC}"
-                return 0
-            else
-                echo -e "${RED}${BOLD}[✗] Failed to get localtunnel URL.${NC}"
-                kill $TUNNEL_PID 2>/dev/null || true
-            fi
-        fi
-        return 1
-    }
-
-    try_cloudflared() {
-        echo -e "\n${CYAN}${BOLD}[✓] Trying cloudflared...${NC}"
-        if install_cloudflared; then
-            echo -e "\n${CYAN}${BOLD}[✓] Starting cloudflared tunnel...${NC}"
-            TUNNEL_TYPE="cloudflared"
-            cloudflared tunnel --url http://localhost:$PORT > cloudflared_output.log 2>&1 &
-            TUNNEL_PID=$!
-            
-            counter=0
-            MAX_WAIT=10
-            while [ $counter -lt $MAX_WAIT ]; do
-                CLOUDFLARED_URL=$(grep -o 'https://[^ ]*\.trycloudflare.com' cloudflared_output.log | head -n1)
-                if [ -n "$CLOUDFLARED_URL" ]; then
-                    echo -e "${GREEN}${BOLD}[✓] Cloudflared tunnel is started successfully.${NC}"
-                    echo -e "\n${CYAN}${BOLD}[✓] Checking if cloudflared URL is working...${NC}"
-                    if check_url "$CLOUDFLARED_URL"; then
-                        FORWARDING_URL="$CLOUDFLARED_URL"
-                        return 0
-                    else
-                        echo -e "${RED}${BOLD}[✗] Cloudflared URL is not accessible.${NC}"
-                        kill $TUNNEL_PID 2>/dev/null || true
-                        break
-                    fi
-                fi
-                sleep 1
-                counter=$((counter + 1))
-            done
-            kill $TUNNEL_PID 2>/dev/null || true
-        fi
-        return 1
-    }
-
     get_ngrok_url_method1() {
         local url=$(grep -o '"url":"https://[^"]*' ngrok_output.log 2>/dev/null | head -n1 | cut -d'"' -f4)
         echo "$url"
