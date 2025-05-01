@@ -73,10 +73,10 @@ def count_xml(text) -> float:
     if text.count("\n</explain>\n") == 1:
         count += 4
     if text.count("\n<identify>\n") == 1:
-        count += 0.125
+        count += 4
         count -= len(text.split("\n</identify>\n")[-1]) * 0.001
     if text.count("\n</identify>") == 1:
-        count += 0.125
+        count += 4
         count -= (len(text.split("\n</identify>")[-1]) - 1) * 0.001
     return count
 
@@ -138,15 +138,15 @@ def correctness_reward_func(
         cur_reward = 0
         if r in agent_answers:
             if stage1_rewards.extract_xml_answer(agent_answers[r]) == answer[0]:
-                cur_reward += 1.0
+                cur_reward += 5.0
             if stage1_rewards.extract_xml_answer(agent_answers[r]).isdigit():
-                cur_reward += 0.5
+                cur_reward += 2.5
             pattern = r"^<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>\n$"
             if re.match(pattern, agent_answers[r]):
-                cur_reward += 0.5
+                cur_reward += 2.5
             pattern = r"<think>.*?</think>\s*<answer>.*?</answer>"
             if re.match(pattern, agent_answers[r]):
-                cur_reward += 0.5
+                cur_reward += 2.5
             cur_reward += stage1_rewards.count_xml(agent_answers[r])
         elif r in [
             "None",
@@ -167,7 +167,7 @@ def correctness_reward_func(
                 True if r == a else False for r, a in zip(agent_as, answer)
             ]
             if all(check_submissions):
-                cur_reward += 10
+                cur_reward += 50
         chosen_rewards += [cur_reward]
     if (random.random() < 0.01) and logging:  # 1% chance to write samples into a file
         if extracted_responses[0] in agent_answers:
