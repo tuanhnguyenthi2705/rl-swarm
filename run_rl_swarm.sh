@@ -19,6 +19,14 @@ export ORG_ID
 export HF_HUB_DOWNLOAD_TIMEOUT=120
 export TUNNEL_TYPE=""
 
+# Enforce GPU-only mode
+if ! command -v nvidia-smi &> /dev/null; then
+    echo -e "${RED}[✗] No NVIDIA GPU detected. Exiting.${NC}"
+    exit 1
+fi
+export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=index --format=csv,noheader | paste -sd ",")
+
+
 DEFAULT_PUB_MULTI_ADDRS=""
 PUB_MULTI_ADDRS=${PUB_MULTI_ADDRS:-$DEFAULT_PUB_MULTI_ADDRS}
 
@@ -35,7 +43,6 @@ SMALL_SWARM_CONTRACT="0x69C6e1D608ec64885E7b185d39b04B491a71768C"
 BIG_SWARM_CONTRACT="0x6947c6E196a48B77eFa9331EC1E3e45f3Ee5Fd58"
 
 # Will ignore any visible GPUs if set.
-CPU_ONLY=${CPU_ONLY:-""}
 
 
 check_cuda_installation() {
@@ -122,8 +129,7 @@ check_cuda_installation() {
         else
             echo -e "${YELLOW}${BOLD}[!] Proceeding without CUDA installation${NC}"
             echo -e "${YELLOW}${BOLD}[!] Note: GPU acceleration will not be available${NC}"
-            CPU_ONLY="true"
-        fi
+                    fi
     fi
     
     return 0
