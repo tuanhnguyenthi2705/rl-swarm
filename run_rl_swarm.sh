@@ -327,35 +327,6 @@ else
         return 1
     }
 
-    install_ngrok() {
-        if command -v ngrok >/dev/null 2>&1; then
-            echo -e "${GREEN}${BOLD}[✓] ngrok is already installed.${NC}"
-            return 0
-        fi
-        echo -e "${YELLOW}${BOLD}[✓] Installing ngrok...${NC}"
-        NGROK_URL="https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-$OS-$NGROK_ARCH.tgz"
-        wget -q --show-progress "$NGROK_URL" -O ngrok.tgz
-        if [ $? -ne 0 ]; then
-            echo -e "${RED}${BOLD}[✗] Failed to download ngrok.${NC}"
-            return 1
-        fi
-        tar -xzf ngrok.tgz
-        if [ $? -ne 0 ]; then
-            echo -e "${RED}${BOLD}[✗] Failed to extract ngrok.${NC}"
-            rm ngrok.tgz
-            return 1
-        fi
-        sudo mv ngrok /usr/local/bin/
-        if [ $? -ne 0 ]; then
-            echo -e "${RED}${BOLD}[✗] Failed to move ngrok to /usr/local/bin/.${NC}"
-            rm ngrok.tgz
-            return 1
-        fi
-        rm ngrok.tgz
-        echo -e "${GREEN}${BOLD}[✓] ngrok installed successfully.${NC}"
-        return 0
-    }
-    
     install_localtunnel() {
         if command -v lt >/dev/null 2>&1; then
             echo -e "${GREEN}${BOLD}[✓] Localtunnel is already installed.${NC}"
@@ -391,6 +362,35 @@ else
             return 1
         fi
         echo -e "${GREEN}${BOLD}[✓] Cloudflared installed successfully.${NC}"
+        return 0
+    }
+
+    install_ngrok() {
+        if command -v ngrok >/dev/null 2>&1; then
+            echo -e "${GREEN}${BOLD}[✓] ngrok is already installed.${NC}"
+            return 0
+        fi
+        echo -e "${YELLOW}${BOLD}[✓] Installing ngrok...${NC}"
+        NGROK_URL="https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-$OS-$NGROK_ARCH.tgz"
+        wget -q --show-progress "$NGROK_URL" -O ngrok.tgz
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}${BOLD}[✗] Failed to download ngrok.${NC}"
+            return 1
+        fi
+        tar -xzf ngrok.tgz
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}${BOLD}[✗] Failed to extract ngrok.${NC}"
+            rm ngrok.tgz
+            return 1
+        fi
+        sudo mv ngrok /usr/local/bin/
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}${BOLD}[✗] Failed to move ngrok to /usr/local/bin/.${NC}"
+            rm ngrok.tgz
+            return 1
+        fi
+        rm ngrok.tgz
+        echo -e "${GREEN}${BOLD}[✓] ngrok installed successfully.${NC}"
         return 0
     }
 
