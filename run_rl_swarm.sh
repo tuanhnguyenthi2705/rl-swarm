@@ -547,11 +547,11 @@ else
             return 0
         fi
         
-        if try_cloudflared; then
+        if try_localtunnel; then
             return 0
         fi
         
-        if try_localtunnel; then
+        if try_cloudflared; then
             return 0
         fi
         return 1
