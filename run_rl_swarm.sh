@@ -12,6 +12,14 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 export PUB_MULTI_ADDRS
+export PYTHONUNBUFFERED=1
+python - <<'EOF'
+import sys
+sys.setrecursionlimit(5000)
+from hivemind_exp.gsm8k.train_single_gpu import main
+if __name__ == "__main__":
+    main()
+EOF
 export PEER_MULTI_ADDRS
 export HOST_MULTI_ADDRS
 export IDENTITY_PATH
