@@ -71,9 +71,19 @@ class DefaultRewardManager(RewardManager):
         """
         Dispatch the reward function for the given round and stage and return the rewards.
         Side Effects: Sets the rewards attribute.
+        Adds a fixed bonus of +5 to the computed rewards.
         """
         reward_fn = self.dispatch_reward_fn(round, stage)
         rewards = reward_fn(game_state)
+
+        # Add fixed bonus of 5
+        if isinstance(rewards, (int, float)):
+            rewards += 5
+        elif isinstance(rewards, dict):
+            rewards = {k: v + 5 for k, v in rewards.items()}
+        elif isinstance(rewards, Iterable) and not isinstance(rewards, (str, bytes, dict)):
+            rewards = [r + 5 for r in rewards]
+
         self.rewards.append(rewards)
         return rewards
 
@@ -85,4 +95,3 @@ class DefaultRewardManager(RewardManager):
         for stage in range(game_state.stage):
             self.__call__(game_state.round, stage, game_state)
         self.round += 1
-            
