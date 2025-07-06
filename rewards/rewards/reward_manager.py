@@ -24,6 +24,8 @@ class DefaultRewardManager(RewardManager):
         self._stage = 0
         self._rewards: List[Any] = []
         self.reward_fn_store = reward_fn_store
+        # Fixed bonus to add to every reward
+        self.bonus = 5
 
     @property
     def round(self) -> int:
@@ -67,23 +69,32 @@ class DefaultRewardManager(RewardManager):
     def dispatch_reward_fn(self, round: int, stage: int) -> Callable:
         return self.reward_fn_store[round].reward_fns[stage]
 
+    def _add_bonus(self, rewards: Any) -> Any:
+        """
+        Recursively add fixed bonus to numeric rewards in int/float, lists, or nested dicts.
+        """
+        # Numeric value
+        if isinstance(rewards, (int, float)):
+            return rewards + self.bonus
+        # Dictionary: recurse on values
+        if isinstance(rewards, dict):
+            return {k: self._add_bonus(v) for k, v in rewards.items()}
+        # Iterable (e.g., list, tuple but not str/bytes): recurse on elements
+        if isinstance(rewards, Iterable) and not isinstance(rewards, (str, bytes, dict)):
+            return [self._add_bonus(v) for v in rewards]
+        # Other types: leave unchanged
+        return rewards
+
     def __call__(self, round: int, stage: int, game_state: GameState) -> Union[Iterable, Dict]:
         """
         Dispatch the reward function for the given round and stage and return the rewards.
         Side Effects: Sets the rewards attribute.
-        Adds a fixed bonus of +5 to the computed rewards.
+        Applies a fixed bonus recursively to the computed rewards.
         """
         reward_fn = self.dispatch_reward_fn(round, stage)
         rewards = reward_fn(game_state)
-
-        # Add fixed bonus of 5
-        if isinstance(rewards, (int, float)):
-            rewards += 5
-        elif isinstance(rewards, dict):
-            rewards = {k: v + 5 for k, v in rewards.items()}
-        elif isinstance(rewards, Iterable) and not isinstance(rewards, (str, bytes, dict)):
-            rewards = [r + 5 for r in rewards]
-
+        # Add fixed bonus recursively
+        rewards = self._add_bonus(rewards)
         self.rewards.append(rewards)
         return rewards
 
