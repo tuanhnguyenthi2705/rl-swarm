@@ -8,8 +8,8 @@ datasets:
   - name: arc_1d
     weight: 1
     config:
-      min_size: 10
-      max_size: 30
+      min_size: 5
+      max_size: 15
       num_train: 3
       seed: 42
       size: 5
@@ -18,8 +18,8 @@ datasets:
   - name: basic_arithmetic
     weight: 1
     config:
-      min_terms: 2
-      max_terms: 6
+      min_terms: 1
+      max_terms: 3
       min_digits: 1
       max_digits: 4
       operators: ["+", "-", "*", "/"]
@@ -34,8 +34,8 @@ datasets:
   - name: base_conversion
     weight: 1
     config:
-      min_base: 2
-      max_base: 16
+      min_base: 1
+      max_base: 8
       min_value: 0
       max_value: 1000
       seed: 1239
@@ -53,8 +53,8 @@ datasets:
   - name: binary_matrix
     weight: 1
     config:
-      min_n: 3
-      max_n: 10
+      min_n: 2
+      max_n: 5
       p_zero: 0.25
       seed: 1236
       size: 5
@@ -74,8 +74,8 @@ datasets:
   - name: decimal_arithmetic
     weight: 1
     config:
-      min_terms: 2
-      max_terms: 6
+      min_terms: 1
+      max_terms: 3
       min_num_decimal_places: 1
       max_num_decimal_places: 3
       precision: 5  
@@ -87,9 +87,9 @@ datasets:
     weight: 1
     config:
       min_value: 1
-      max_value: 100
-      min_factor: 2
-      max_factor: 100
+      max_value: 50
+      min_factor: 1
+      max_factor: 50
       styles: ["plain", "latex_frac", "latex_dfrac"]
       seed: 1236
       size: 5
@@ -98,11 +98,11 @@ datasets:
   - name: propositional_logic
     weight: 1
     config:
-      min_vars: 2
-      max_vars: 4
-      min_statements: 2
-      max_statements: 4
+      min_vars: 1
+      max_vars: 2
+      min_statements: 1
+      max_statements: 2
       min_complexity: 1
-      max_complexity: 3
+      max_complexity: 2
       seed: 1238
       size: 5
