@@ -34,7 +34,7 @@ datasets:
   - name: base_conversion
     weight: 1
     config:
-      min_base: 1
+      min_base: 2
       max_base: 8
       min_value: 0
       max_value: 1000
