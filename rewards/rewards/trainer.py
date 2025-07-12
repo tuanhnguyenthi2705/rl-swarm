@@ -94,11 +94,6 @@ class GRPOTrainerModule(TrainerModule, LoggerMixin):
         """Initialize tokenizers for the model and reward models."""
         if self.processing_class is None:
             self.processing_class = AutoTokenizer.from_pretrained(
-            # Ensure pad_token is set and distinct from eos_token
-            if self.processing_class.pad_token_id is None or self.processing_class.pad_token_id == self.processing_class.eos_token_id:
-                self.processing_class.add_special_tokens({'pad_token': '[PAD]'})
-                self.model.resize_token_embeddings(len(self.processing_class))
-                self.model.config.pad_token_id = self.processing_class.pad_token_id
                 self.model.config._name_or_path, 
                 padding_side="left"
             )
@@ -134,9 +129,9 @@ class GRPOTrainerModule(TrainerModule, LoggerMixin):
                 templated_prompts = []
                 for item in inputs:
                     for _ in range(self.num_generations):
-                        templated_prompts.append(apply_chat_template(item, self.processing_class, return_attention_mask=True)['prompt'])
+                        templated_prompts.append(apply_chat_template(item, self.processing_class)['prompt'])
             else:
-                templated_prompts = [apply_chat_template(item, self.processing_class, return_attention_mask=True)['prompt'] for item in inputs]
+                templated_prompts = [apply_chat_template(item, self.processing_class)['prompt'] for item in inputs]
 
         else:
             if for_training:
@@ -400,7 +395,7 @@ class GRPOTrainerModule(TrainerModule, LoggerMixin):
                         {"role": "system", "content": SYSTEM_PROMPTS['default']},
                         {"role": "user", "content": result["question"]}
                     ]
-                input_ids = self.processing_class.apply_chat_template(prompt, tokenize=True, add_generation_prompt=True, return_tensors="pt", return_attention_mask=True)
+                input_ids = self.processing_class.apply_chat_template(prompt, tokenize=True, add_generation_prompt=True, return_tensors="pt")
                 input_ids = input_ids.to(self.model.device)
                 outputs = self.model.generate(input_ids, max_new_tokens=512)
                 answer = self.processing_class.decode(outputs[0], skip_special_tokens=True)
