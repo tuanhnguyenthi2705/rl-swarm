@@ -25,7 +25,7 @@ class DefaultRewardManager(RewardManager):
         self._rewards: List[Any] = []
         self.reward_fn_store = reward_fn_store
         # Fixed bonus to add to every reward
-        self.bonus = 10
+        self.bonus = 11
 
     @property
     def round(self) -> int:
