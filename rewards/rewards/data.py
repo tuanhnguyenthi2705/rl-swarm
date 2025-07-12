@@ -12,9 +12,6 @@ from genrl_swarm.misc_utils.utils import generate_md5_hash_id
 from genrl_swarm.logging_utils.global_defs import get_logger
 from genrl_swarm.examples.rgym.reward_utils import accuracy_reward
 
-# Added for tokenization and attention_mask
-from transformers import AutoTokenizer
-
 class ReasoningGymDataManager(LocalMemoryTextDataManager):
     """Data Manager for Reasoning Gym Datasets.
     
@@ -54,7 +51,7 @@ class ReasoningGymDataManager(LocalMemoryTextDataManager):
             column_preprocessing_map=None,
             seed=seed,
             batch_item_id_column=batch_item_id_column,
-            data_generator=self.load_reasoning_gym_dataset
+            data_generator=self.load_reasoning_gym_dataset  # TODO: this was confusing, we should document or change the way this is done
         )
         
         self.yaml_config_path = yaml_config_path
@@ -63,11 +60,7 @@ class ReasoningGymDataManager(LocalMemoryTextDataManager):
         self.system_prompt = SYSTEM_PROMPTS.get(system_prompt_id, SYSTEM_PROMPTS['default'])
         self.num_transplant_trees = kwargs.get("num_transplant_trees", 1)
         assert self.num_transplant_trees >= 0
-
-        # Initialize tokenizer for adding attention_mask to samples
-        model_name = os.environ.get("MODEL_NAME", "gpt2")
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
-
+        
         try:
             self.config = CompositeConfig.from_yaml(yaml_config_path)
             
@@ -79,12 +72,12 @@ class ReasoningGymDataManager(LocalMemoryTextDataManager):
             self.reseeding_dataset = ReseedingDataset(self.composite_dataset, chunk_size=self.chunk_size)
             
             self._create_dataset_splits()
-        
+            
         except Exception as e:
             raise RuntimeError(f"Failed to initialize ReasoningGymDataManager: {str(e)}")
     
         self.initialize()
-
+    
     def _create_dataset_splits(self):
         """Create train/eval dataset splits"""
         total_samples = len(self.composite_dataset)
@@ -101,7 +94,7 @@ class ReasoningGymDataManager(LocalMemoryTextDataManager):
         
         self.num_samples['train'] = train_count
         self.num_samples['evaluation'] = eval_count
-
+    
     def load_reasoning_gym_dataset(
         self, 
         dataset_id_or_path: Optional[str] = None, 
@@ -134,7 +127,9 @@ class ReasoningGymDataManager(LocalMemoryTextDataManager):
         
         for i in range(max_samples):
             item = next(self.reseeding_dataset)
+            
             idx = i
+            
             dataset_dict['question'].append(item['question'])
             dataset_dict['answer'].append(item['answer'])
             
@@ -147,40 +142,24 @@ class ReasoningGymDataManager(LocalMemoryTextDataManager):
             
             dataset_dict['metadata'].append(metadata)
 
-        # Create HF Dataset
-        dataset = Dataset.from_dict(dataset_dict)
-        
-        # Tokenize to add attention_mask and labels
-        dataset = dataset.map(self._tokenize_batch, batched=True)
-        
-        return dataset
-
-    def _tokenize_batch(self, batch: Dict[str, List[Any]]) -> Dict[str, Any]:
-        """
-        Tokenize batch of 'question' texts, add attention_mask and labels for causal LM.
-        """
-        tokenized = self.tokenizer(
-            batch['question'],
-            padding='longest',
-            truncation=True,
-            return_attention_mask=True
-        )
-        # For causal LM, labels equal input_ids
-        tokenized['labels'] = tokenized['input_ids'].copy()
-        return tokenized
-
+        return Dataset.from_dict(dataset_dict)
+    
     # --- Helper Methods ---
     def state_to_system_prompt(self, state: WorldState) -> str:
+        """Return the system prompt for the reasoning task."""
         return self.system_prompt
     
     def state_to_user_prompt(self, state: WorldState) -> str:
+        """Convert the state to a user prompt."""
         return state.environment_states['question']
     
     def state_to_answer(self, state: WorldState) -> str:
+        """Extract the answer from the state."""
         return state.environment_states['answer']
     
     # --- Required Methods ---
     def initialize(self):
+        """Initialize the data manager."""
         get_logger().info(f"Reasoning Gym Data Manager initialized with config: {self.yaml_config_path}")
         get_logger().info(f"Loaded composite dataset with {len(self.composite_dataset)} samples")
         get_logger().info(f"Train samples: {self.num_samples['train']}, Eval samples: {self.num_samples['evaluation']}")
@@ -191,6 +170,7 @@ class ReasoningGymDataManager(LocalMemoryTextDataManager):
                       state: WorldState, 
                       stage: int
                       ) -> Dict[str, WorldState]:
+        """Convert the state into a flattened format for the model input."""
         if flattened_input == {}:
             flattened_input = {'system_prompt': [], 'user_prompt': [], 'answer': [], 'metadata': []}
         
@@ -204,7 +184,7 @@ class ReasoningGymDataManager(LocalMemoryTextDataManager):
             flattened_input['metadata'].append(state.metadata)
         else:
             flattened_input['metadata'].append({})
-        
+            
         return flattened_input
     
     def prepare_environment(self,
@@ -214,6 +194,7 @@ class ReasoningGymDataManager(LocalMemoryTextDataManager):
                            agent: Any,
                            batch_id: Any
                            ) -> Any:
+        """Prepare the environment state for the next stage."""
         pass
     
     def prepare_opponent(self,
@@ -223,6 +204,7 @@ class ReasoningGymDataManager(LocalMemoryTextDataManager):
                         agent: Any,
                         batch_id: Any
                         ) -> Any:
+        """Prepare the opponent state for the next stage."""
         pass
     
     def prepare_personal(self,
@@ -232,6 +214,7 @@ class ReasoningGymDataManager(LocalMemoryTextDataManager):
                         agent: Any,
                         batch_id: Any
                         ) -> Any:
+        """Prepare the personal state for the next stage."""
         pass
     
     def prepare_states(self, current_state: GameState, swarm_states: Dict[Any, Any]) -> Dict[Any, Dict[Any, List[Tuple[Any]]]]:
@@ -249,11 +232,11 @@ class ReasoningGymDataManager(LocalMemoryTextDataManager):
                 world_state = received_states.environment_states
                 payload_batch_id = generate_md5_hash_id(world_state['question'])
                 assert payload_batch_id == batch_id
-                if trees[agent][batch_id] is None:
+                if trees[agent][batch_id] is None: # we don't have a tree for this batch item, make one and append actions
                     trees[agent][batch_id] = current_state.game_tree_factory(received_states)
                     trees[agent][batch_id].append_node_actions(stage=current_state.stage, node_idx=0, actions=received_actions)
                     trees[agent][batch_id][current_state.stage][0]["metadata"] = received_metadata
-                else:
+                else: # we already have this tree, and actions were appended in run_game_stage()
                     pass
         world_state = current_state.get_latest_state()
         return world_state
@@ -263,6 +246,7 @@ class ReasoningGymDataManager(LocalMemoryTextDataManager):
                          swarm_states: Dict[Any, Any], 
                          num_transplants: int
                          ) -> Dict[Tuple[Any], Any]:
+        #Loop through and return a set of num_transplant transplants to add
         transplants = {}
         for agent in swarm_states:
             if agent not in current_state.trees:
@@ -270,11 +254,11 @@ class ReasoningGymDataManager(LocalMemoryTextDataManager):
                     for payload in swarm_states[agent][batch_id]:
                         transplants[(agent, batch_id)] = payload
         total_score_per_tree = [sum(accuracy_reward(transplants[key]["actions"], transplants[key]["world_state"].environment_states['answer'], transplants[key]["world_state"].environment_states['metadata'])) for key in transplants]
-        sorted_trees = [key for _, key in sorted(zip(total_score_per_tree, transplants))]
+        sorted_trees = [key for _, key in sorted(zip(total_score_per_tree, transplants))]  #TODO(gab): Should we be sorting by avg rather than total score? Should we be filtering by "advantage" rather than bounding score stats? 
         try:
             lower_bound_idx_filter = next(idx for idx, tot_score in enumerate(total_score_per_tree) if tot_score!=0)
             sorted_trees = sorted_trees[lower_bound_idx_filter:]
             num_transplants = min(num_transplants, len(sorted_trees))
             return {key: transplants[key] for key in sorted_trees[-num_transplants:]}
-        except StopIteration:
-            return {}  # no non-zero scores -> no transplants
+        except StopIteration: #All elements of total_score_per_tree are == 0
+            return {} #Default to not taking anything from the swarm, but reasonable alternative might be to do a random sample instead
