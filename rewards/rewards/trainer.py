@@ -97,9 +97,9 @@ class GRPOTrainerModule(TrainerModule, LoggerMixin):
                 self.model.config._name_or_path, 
                 padding_side="left"
             )
-        # Ensure pad_token is set distinct from eos_token
+        # Ensure pad_token is set and distinct from eos_token
         if self.processing_class.pad_token_id is None or self.processing_class.pad_token_id == self.processing_class.eos_token_id:
-            self.processing_class.add_special_tokens({'pad_token': '[PAD]'})
+            self.processing_class.add_special_tokens({\"pad_token\": \"[PAD]\"})
             self.model.resize_token_embeddings(len(self.processing_class))
             self.model.config.pad_token_id = self.processing_class.pad_token_id
     
@@ -401,9 +401,15 @@ class GRPOTrainerModule(TrainerModule, LoggerMixin):
                         {"role": "system", "content": SYSTEM_PROMPTS['default']},
                         {"role": "user", "content": result["question"]}
                     ]
-                input_ids = self.processing_class.apply_chat_template(prompt, tokenize=True, add_generation_prompt=True, return_tensors="pt", return_attention_mask=True)
+                encoded = self.processing_class.apply_chat_template(prompt, tokenize=True, add_generation_prompt=True, return_tensors="pt", return_attention_mask=True)
+                input_ids = encoded['input_ids'].to(self.device)
+                attention_mask = encoded['attention_mask'].to(self.device)
                 input_ids = input_ids.to(self.model.device)
-                outputs = self.model.generate(input_ids, max_new_tokens=512)
+                outputs = self.model.generate(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    max_new_tokens=512
+                )
                 answer = self.processing_class.decode(outputs[0], skip_special_tokens=True)
                 session_id = result["session_id"]
                 submission_data = {
