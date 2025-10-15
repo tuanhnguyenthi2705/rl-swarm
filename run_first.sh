@@ -67,11 +67,10 @@ if [ "$CONNECT_TO_TESTNET" = true ]; then
     command -v yarn >/dev/null 2>&1 || { echo "Yarn install failed"; exit 1; }
   fi
 
-  # .yarnrc.yml – tắt immutable + dùng node-modules cho ổn định dưới systemd
+  # .yarnrc.yml – tắt immutable + dùng node-modules
   if [ ! -f ".yarnrc.yml" ]; then
     printf "enableImmutableInstalls: false\nnodeLinker: node-modules\n" > .yarnrc.yml
   else
-    # đảm bảo 2 key tồn tại
     grep -q '^enableImmutableInstalls:' .yarnrc.yml || echo "enableImmutableInstalls: false" >> .yarnrc.yml
     grep -q '^nodeLinker:' .yarnrc.yml || echo "nodeLinker: node-modules" >> .yarnrc.yml
   fi
@@ -127,6 +126,7 @@ if [ "$CONNECT_TO_TESTNET" = true ]; then
 
   cd "$ROOT"
   echo_green ">> Dang cho tao file userData.json..."
+  # Chỉ cần file tồn tại (giống file của bạn), không kiểm tra JSON hợp lệ
   WAIT_JSON_TIMEOUT=300
   waited=0
   until [ -f "modal-login/temp-data/userData.json" ] || [ $waited -ge $WAIT_JSON_TIMEOUT ]; do
@@ -134,27 +134,27 @@ if [ "$CONNECT_TO_TESTNET" = true ]; then
   done
   [ -f "modal-login/temp-data/userData.json" ] || { echo_red "Timeout doi userData.json"; exit 1; }
 
-  # Lấy ORG_ID bằng jq
-  if ! command -v jq >/dev/null 2>&1; then
-    apt-get update && apt-get install -y jq >/dev/null 2>&1 || true
+  # Lấy ORG_ID kiểu đơn giản bằng awk (giống bản bạn đang chạy OK)
+  ORG_ID=$(awk 'BEGIN { FS = "\"" } !/^[ \t]*[{}]/ { print $(NF - 1); exit }' \
+    "modal-login/temp-data/userData.json" || true)
+  if [ -z "${ORG_ID:-}" ]; then
+    echo "CANH BAO: Khong tim thay orgId trong userData.json -> bo qua buoc doi kich hoat API key."
+  else
+    echo "ORG_ID: $ORG_ID"
+    # Chờ API key kích hoạt (timeout)
+    echo "Cho kich hoat API key..."
+    MAX_TRIES=120  # ~10 phút
+    try=0
+    while :; do
+      STATUS=$(curl -m 3 -s "http://localhost:3000/api/get-api-key-status?orgId=$ORG_ID" || echo "error")
+      if [[ "$STATUS" == "activated" ]]; then
+        echo_green "API key da duoc kich hoat!"
+        break
+      fi
+      try=$((try+1)); [ $try -ge $MAX_TRIES ] && { echo "CANH BAO: Timeout doi API key, tiep tuc."; break; }
+      sleep 5
+    done
   fi
-  ORG_ID=$(jq -r '.orgId // empty' "modal-login/temp-data/userData.json")
-  [ -n "$ORG_ID" ] || { echo_red "Khong tim thay orgId trong userData.json"; exit 1; }
-  echo "ORG_ID: $ORG_ID"
-
-  # Chờ API key kích hoạt (timeout)
-  echo "Cho kich hoat API key..."
-  MAX_TRIES=120  # ~10 phút
-  try=0
-  while :; do
-    STATUS=$(curl -m 3 -s "http://localhost:3000/api/get-api-key-status?orgId=$ORG_ID" || echo "error")
-    if [[ "$STATUS" == "activated" ]]; then
-      echo_green "API key da duoc kich hoat!"
-      break
-    fi
-    try=$((try+1)); [ $try -ge $MAX_TRIES ] && { echo_red "Timeout doi API key"; exit 1; }
-    sleep 5
-  done
 fi
 
 # ==== Python deps (đúng version) ====
