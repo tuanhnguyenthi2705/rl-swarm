@@ -30,7 +30,7 @@ fi
 if [ "$CONNECT_TO_TESTNET" = true ]; then
   cd modal-login
 
-  # Không để immutable & fix viem 2.29.2 (như ở run_first)
+  # Không để immutable & fix viem 2.29.2 (đồng bộ với run_first.sh)
   if [ ! -f ".yarnrc.yml" ]; then
     printf "enableImmutableInstalls: false\nnodeLinker: node-modules\n" > .yarnrc.yml
   else
@@ -69,24 +69,24 @@ if [ "$CONNECT_TO_TESTNET" = true ]; then
 
   cd "$ROOT"
 
-  # Lấy ORG_ID bằng jq
-  if ! command -v jq >/dev/null 2>&1; then
-    apt-get update && apt-get install -y jq >/dev/null 2>&1 || true
+  # Lấy ORG_ID kiểu đơn giản bằng awk (giống bản bạn đang chạy OK)
+  ORG_ID=$(awk 'BEGIN { FS = "\"" } !/^[ \t]*[{}]/ { print $(NF - 1); exit }' \
+    "modal-login/temp-data/userData.json" || true)
+  if [ -z "${ORG_ID:-}" ]; then
+    echo "CANH BAO: Khong tim thay orgId trong userData.json -> bo qua buoc doi kich hoat API key."
+  else
+    echo "ORG_ID: $ORG_ID"
+    # Kiểm tra API key (timeout ngắn hơn)
+    echo "Checking API key status..."
+    MAX_TRIES=60  # ~5 phút
+    try=0
+    while :; do
+      STATUS=$(curl -m 3 -s "http://localhost:3000/api/get-api-key-status?orgId=$ORG_ID" || echo "error")
+      [ "$STATUS" = "activated" ] && { echo_green "API key activated!"; break; }
+      try=$((try+1)); [ $try -ge $MAX_TRIES ] && { echo "CANH BAO: Timeout doi API key, tiep tuc."; break; }
+      sleep 5
+    done
   fi
-  ORG_ID=$(jq -r '.orgId // empty' "modal-login/temp-data/userData.json")
-  [ -n "$ORG_ID" ] || { echo_red "Khong tim thay orgId trong userData.json"; exit 1; }
-  echo "ORG_ID: $ORG_ID"
-
-  # Kiểm tra API key (timeout ngắn hơn)
-  echo "Checking API key status..."
-  MAX_TRIES=60  # ~5 phút
-  try=0
-  while :; do
-    STATUS=$(curl -m 3 -s "http://localhost:3000/api/get-api-key-status?orgId=$ORG_ID" || echo "error")
-    [ "$STATUS" = "activated" ] && { echo_green "API key activated!"; break; }
-    try=$((try+1)); [ $try -ge $MAX_TRIES ] && { echo_red "Timeout doi API key"; exit 1; }
-    sleep 5
-  done
 fi
 
 # Đảm bảo có configs
